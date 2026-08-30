@@ -39,10 +39,15 @@
     border-bottom:1px solid var(--line);
   }
   .nav-title{
-    display:flex; align-items:center; justify-content:center; gap:10px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    flex-wrap:wrap; row-gap:6px;
     padding-top:10px; padding-bottom:8px;
     max-width:640px; margin:0 auto;
   }
+  .nav-left{display:flex; align-items:center; gap:10px;}
+  .nav-sync{display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
+  .nav-sync .sync-btn{padding:5px 10px; font-size:11px;}
+  .nav-sync .sync-status{white-space:nowrap;}
   .mode-btn{
     flex:none; border:2px solid var(--teal); background:var(--teal); color:#fff;
     border-radius:999px; padding:8px 18px; font-size:13.5px; font-weight:700; cursor:pointer;
@@ -368,8 +373,19 @@
 
 <nav class="tabs">
   <div class="wrap nav-title">
-    <span class="stage-badge" id="stageBadge"></span>
-    <button class="mode-btn" id="modeBtn" data-action="toggle-mode">완료</button>
+    <div class="nav-left">
+      <span class="stage-badge" id="stageBadge"></span>
+      <button class="mode-btn" id="modeBtn" data-action="toggle-mode">완료</button>
+    </div>
+    <div class="nav-sync" id="navSync">
+      <button class="sync-btn" id="loginBtn" data-action="login">☁️ 로그인해서 동기화</button>
+      <div class="user-info" id="userInfo" style="display:none;">
+        <img class="user-avatar" id="userAvatar" src="" alt="">
+        <span id="userName"></span>
+        <button class="sync-btn-small" data-action="logout">로그아웃</button>
+      </div>
+      <span class="sync-status" id="syncStatus"></span>
+    </div>
   </div>
   <div class="tabs-scroll" id="tabScroll">
     <span id="dayTabs" style="display:contents"></span>
@@ -384,15 +400,6 @@
 <div class="header-card wrap">
   <input id="inputTitle" class="h-title" type="text" data-scope="header" data-field="title" placeholder="여행 제목을 입력하세요">
   <div class="h-travelers" id="travelersWrap"></div>
-  <div class="sync-row">
-    <button class="sync-btn" id="loginBtn" data-action="login">☁️ 로그인해서 기기 간 동기화</button>
-    <div class="user-info" id="userInfo" style="display:none;">
-      <img class="user-avatar" id="userAvatar" src="" alt="">
-      <span id="userName"></span>
-      <button class="sync-btn-small" data-action="logout">로그아웃</button>
-    </div>
-    <span class="sync-status" id="syncStatus"></span>
-  </div>
   <div class="hint">✏️ [수정모드]에서 모든 항목을 자유롭게 입력·수정할 수 있어요. [보기모드]에서는 조회만 가능합니다.</div>
 </div>
 
