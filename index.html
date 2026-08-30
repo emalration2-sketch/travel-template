@@ -46,10 +46,15 @@
     padding-top:10px; padding-bottom:8px;
     max-width:640px; margin:0 auto;
   }
-  .nav-left{display:flex; align-items:center; gap:10px;}
-  .nav-sync{display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
-  .nav-sync .sync-btn{padding:5px 10px; font-size:11px;}
-  .nav-sync .sync-status{white-space:nowrap;}
+  .nav-left{display:flex; align-items:center; gap:8px; flex:none;}
+  .nav-left .stage-badge{padding:6px 11px; font-size:11.5px;}
+  .nav-left .mode-btn{padding:7px 14px; font-size:12.5px;}
+  .nav-sync{display:flex; align-items:center; gap:5px; flex-wrap:nowrap; justify-content:flex-end; min-width:0;}
+  .nav-sync .sync-btn{padding:5px 10px; font-size:11px; white-space:nowrap;}
+  .nav-sync .sync-status{display:none;}
+  .nav-sync .user-info{min-width:0; gap:4px;}
+  .nav-sync #userName{max-width:44px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .nav-sync .sync-btn-small{padding:3px 8px; font-size:10px;}
   .mode-btn{
     flex:none; border:2px solid var(--teal); background:var(--teal); color:#fff;
     border-radius:999px; padding:8px 18px; font-size:13.5px; font-weight:700; cursor:pointer;
@@ -105,7 +110,7 @@
     border-radius:999px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;
   }
   .user-info{display:flex; align-items:center; gap:6px;}
-  .user-avatar{width:22px; height:22px; border-radius:50%; background:var(--paper-2);}
+  .user-avatar{width:20px; height:20px; border-radius:50%; background:var(--paper-2); flex:none;}
   #userName{font-size:12px; font-weight:600; color:var(--ink);}
   .sync-btn-small{
     border:1px solid var(--line); background:var(--paper-2); color:var(--ink-faint);
