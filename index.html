@@ -92,6 +92,19 @@
     width:26px; height:26px; border-radius:50%; cursor:pointer; font-weight:700;
   }
   .hint{font-size:11.5px; color:var(--ink-faint); padding-bottom:6px;}
+  .sync-row{display:flex; align-items:center; gap:8px; padding-bottom:8px; flex-wrap:wrap;}
+  .sync-btn{
+    border:1px solid var(--teal); background:#fff; color:var(--teal);
+    border-radius:999px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+  .user-info{display:flex; align-items:center; gap:6px;}
+  .user-avatar{width:22px; height:22px; border-radius:50%; background:var(--paper-2);}
+  #userName{font-size:12px; font-weight:600; color:var(--ink);}
+  .sync-btn-small{
+    border:1px solid var(--line); background:var(--paper-2); color:var(--ink-faint);
+    border-radius:999px; padding:3px 10px; font-size:10.5px; cursor:pointer;
+  }
+  .sync-status{font-size:10.5px; color:var(--ink-faint);}
   .back-link{
     border:none; background:transparent; color:var(--teal); font-size:11.5px;
     font-weight:700; cursor:pointer; padding:0;
@@ -371,6 +384,15 @@
 <div class="header-card wrap">
   <input id="inputTitle" class="h-title" type="text" data-scope="header" data-field="title" placeholder="여행 제목을 입력하세요">
   <div class="h-travelers" id="travelersWrap"></div>
+  <div class="sync-row">
+    <button class="sync-btn" id="loginBtn" data-action="login">☁️ 로그인해서 기기 간 동기화</button>
+    <div class="user-info" id="userInfo" style="display:none;">
+      <img class="user-avatar" id="userAvatar" src="" alt="">
+      <span id="userName"></span>
+      <button class="sync-btn-small" data-action="logout">로그아웃</button>
+    </div>
+    <span class="sync-status" id="syncStatus"></span>
+  </div>
   <div class="hint">✏️ [수정모드]에서 모든 항목을 자유롭게 입력·수정할 수 있어요. [보기모드]에서는 조회만 가능합니다.</div>
 </div>
 
@@ -431,6 +453,9 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
 const STORAGE_KEY = 'travel-template-data-v1';
 let modalDayId = null, modalItemId = null, editingExpenseId = null, saveTimer = null;
@@ -471,8 +496,93 @@ let state = loadState() || defaultState();
 if(!Array.isArray(state.links)) state.links = [];
 let currentMode = localStorage.getItem('travel-template-mode') || 'edit';
 
-function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+function save(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  if(currentUser) saveToCloudDebounced();
+}
 function saveDebounced(){ clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+
+/* ---------- FIREBASE SYNC ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAVmA5gf2m3HdeUOodgVwP0LnApfRKvu-I",
+  authDomain: "travel-template-9ccfc.firebaseapp.com",
+  projectId: "travel-template-9ccfc",
+  storageBucket: "travel-template-9ccfc.firebasestorage.app",
+  messagingSenderId: "767720403435",
+  appId: "1:767720403435:web:84877d0b03f4cea39b69ae"
+};
+let fbAuth = null, fbDb = null, currentUser = null, cloudSaveTimer = null;
+function initFirebase(){
+  if(fbAuth) return;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+    fbAuth.onAuthStateChanged(handleAuthChange);
+  }catch(e){ console.error('Firebase 초기화 실패', e); }
+}
+async function handleAuthChange(user){
+  currentUser = user;
+  const loginBtn = document.getElementById('loginBtn');
+  const userInfo = document.getElementById('userInfo');
+  const statusEl = document.getElementById('syncStatus');
+  if(user){
+    loginBtn.style.display = 'none';
+    userInfo.style.display = 'flex';
+    document.getElementById('userAvatar').src = user.photoURL || '';
+    document.getElementById('userName').textContent = user.displayName || user.email || '내 계정';
+    statusEl.textContent = '동기화 중...';
+    await loadFromCloud();
+    statusEl.textContent = '✓ 동기화됨';
+  } else {
+    loginBtn.style.display = '';
+    userInfo.style.display = 'none';
+    statusEl.textContent = '';
+  }
+}
+async function loadFromCloud(){
+  if(!currentUser || !fbDb) return;
+  try{
+    const snap = await fbDb.collection('users').doc(currentUser.uid).get();
+    if(snap.exists && snap.data().data){
+      state = JSON.parse(snap.data().data);
+      if(!Array.isArray(state.links)) state.links = [];
+      if(!Array.isArray(state.notes)) state.notes = [];
+      rebuildAll();
+      setMode(currentMode);
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+    } else {
+      await saveToCloud();
+    }
+  }catch(e){ console.error('클라우드 불러오기 실패', e); }
+}
+async function saveToCloud(){
+  if(!currentUser || !fbDb) return;
+  try{
+    await fbDb.collection('users').doc(currentUser.uid).set({
+      data: JSON.stringify(state),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const statusEl = document.getElementById('syncStatus');
+    if(statusEl) statusEl.textContent = '✓ 동기화됨';
+  }catch(e){ console.error('클라우드 저장 실패', e); }
+}
+function saveToCloudDebounced(){
+  clearTimeout(cloudSaveTimer);
+  const statusEl = document.getElementById('syncStatus');
+  if(statusEl) statusEl.textContent = '동기화 중...';
+  cloudSaveTimer = setTimeout(saveToCloud, 800);
+}
+function loginWithGoogle(){
+  initFirebase();
+  const provider = new firebase.auth.GoogleAuthProvider();
+  fbAuth.signInWithPopup(provider).catch(e => {
+    alert('로그인에 실패했어요: ' + e.message);
+  });
+}
+function logoutUser(){
+  if(fbAuth) fbAuth.signOut();
+}
 
 /* ---------- RENDER ---------- */
 function updateMiniTitle(){
@@ -975,6 +1085,8 @@ document.addEventListener('click', e => {
   else if(a === 'delete-traveler') deleteTraveler(btn.dataset.idx);
   else if(a === 'reset') resetAll();
   else if(a === 'toggle-mode') setMode(currentMode === 'view' ? 'edit' : 'view');
+  else if(a === 'login') loginWithGoogle();
+  else if(a === 'logout') logoutUser();
   else if(a === 'print-pdf') exportPDF();
   else if(a === 'share') shareGuide();
 });
@@ -1059,6 +1171,7 @@ document.addEventListener('change', e => { handleFieldChange(e); handleAuxChange
 /* ---------- INIT ---------- */
 rebuildAll();
 setMode(currentMode);
+initFirebase();
 </script>
 </body>
 </html>
